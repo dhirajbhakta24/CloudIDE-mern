@@ -46,7 +46,7 @@ editorNamespace.on("connection" , (socket)=>{
             console.log(event,path);
         });
     }
-    handleEditorSocketEvents(socket);
+    handleEditorSocketEvents(socket , editorNamespace);
 })
 
 server.listen(PORT , ()=>{
