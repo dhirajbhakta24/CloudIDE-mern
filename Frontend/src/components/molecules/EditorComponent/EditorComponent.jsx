@@ -2,15 +2,17 @@ import Editor from '@monaco-editor/react';
 import { useEffect, useState } from 'react';
 import { useEditorSocketStore } from '../../../store/editorSocketStore';
 import { useActiveFileTabStore } from '../../../store/activeFileTabStore';
+import { extensionToFileType } from '../../../utils/extensionToFileType';
 
 export const EditorComponent = () => {
 
+    let timerId = null;
     const [editorState, setEditorState] = useState({
         theme: null
     });
-
+    const {activeFileTab} = useActiveFileTabStore();
     const { editorSocket } = useEditorSocketStore();
-    const { activeFileTab, setActiveFileTab } = useActiveFileTabStore();
+    
 
     async function downloadTheme() {
         const response = await fetch('/Dracula.json');
@@ -23,15 +25,26 @@ export const EditorComponent = () => {
         monaco.editor.defineTheme('dracula', editorState.theme);
         monaco.editor.setTheme('dracula');
     }
-
-    editorSocket?.on("readFileSuccess", (data) => {
-        console.log("Read file success", data);
-        setActiveFileTab(data.path, data.value);
-    })
+///debouncing in react
+    function handleChange(value){
+        //Clear old Timer
+        if(timerId!=null){
+            clearTimeout(timerId);
+        }
+        //set the new timer
+        timerId = setTimeout(()=>{
+            const editorContent = value;
+            console.log("Sending writeFile event");
+            editorSocket.emit("writeFile" , {
+                data : editorContent,
+                pathToFileorFolder : activeFileTab.path
+            })
+        },2000);
+    }
 
     useEffect(() => {
         downloadTheme();
-    }, []);
+    });
 
     return (
         <>
@@ -45,6 +58,8 @@ export const EditorComponent = () => {
                         fontSize: 18,
                         fontFamily: 'monospace'
                     }}
+                    language={extensionToFileType(activeFileTab?.extension)}
+                    onChange={handleChange}
                     value={activeFileTab?.value ? activeFileTab.value : '// Welcome to the playground'}
 
                     onMount={handleEditorTheme}
